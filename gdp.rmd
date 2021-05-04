@@ -1,0 +1,211 @@
+data <- read.csv("C:/Users/Tank/Canada.txt", sep = '\t', dec = ',')
+
+install.packages("forecast")
+library("forecast")
+install.packages("lmtest")
+library("lmtest")
+install.packages("tseries")
+library("tseries")
+install.packages("urca")
+library("urca")
+install.packages("TSA")
+library("TSA")
+install.packages("strucchange")
+library("strucchange")
+
+gdp<-data$gdp
+year<-data$year
+year <- as.numeric(levels(year))[as.integer(year)]
+plot(year, gdp)
+
+" проверка на стационарность переменной "
+adf.test(data$lgdp)
+Pacf(data$lgdp)
+ur.df(data$lgdp, type="drift", lags = 1, 
+      selectlags = "Fixed") 
+" ряд не стационарен, ищем стационарность в разности переменной "
+
+"перекодировали переменную и сделали разность"
+data$lgdp <- as.numeric(data$lgdp)
+data$gdp <- as.numeric(levels(data$gdp))[as.integer(data$gdp)]
+d1lgdp<-diff(data$lgdp, differences=1)
+adf.test(d1lgdp)
+Pacf(d1lgdp)
+ur.df(d1lgdp, type="drift", lags = 1, 
+      selectlags = "Fixed") 
+
+
+"Проверка на стационарность ВВП"
+Pacf(d1lgdp)
+"1 лаг значим"
+
+
+"Строим модель AR(0) по ВВП"
+AR1 <- Arima(data$lgdp, c(1,1,0), include.constant =TRUE, method = c("CSS-ML"))  
+coeftest(AR1)
+summary(AR1)
+sd(residuals(AR1))
+Acf(residuals(AR1))
+Box.test(residuals(AR1), lag = 5, type = c("Ljung-Box"), fitdf = 1)
+forecast_AR1 <-forecast(AR1, h=100)
+plot(forecast_AR1)
+
+'структурный разрыв SUP-F'
+b<-1
+m<-30
+e<-146
+
+stats<-rep(NA, e)
+while(m<e-30)
+{
+   'короткая модель'
+   m_short <- Arima(d1lgdp[seq(b,e)], c(1,0,0), include.constant=TRUE, method = c("CSS-ML"))
+   ess_sh <- sum(residuals(m_short)^2)
+   q<-length(coef(m_short))
+   'длинная модель'
+   fit1 <- Arima(d1lgdp[seq(b,m)], order = c(1,0,0), include.mean = TRUE, method="CSS-ML")
+   fit2 <- Arima(d1lgdp[seq(m+1,e)], order = c(1,0,0), include.mean = TRUE, method="CSS-ML")
+   ess_lo <- sum(c(residuals(fit1), residuals(fit2))^2)
+   'F стат'
+   stats[m] <- (ess_sh - ess_lo)/(ess_lo/(e-b+1-2*q))
+   m<-m+1
+}
+plot(stats, type ='l')
+abline(h = qchisq(0.01, df = q, lower.tail = FALSE), lty = 2, col = "red")
+which.max(stats)
+1-pchisq(stats[which.max(stats)], df = q)
+stats[which.max(stats)]
+data$year(51)
+
+
+#данные
+
+d1<-diff(data$lgdp, differences=1)
+d1 <- as.numeric(levels(d1))[as.integer(d1)]
+d1<-d1[1:147]
+d1_l1 <- c(0,d1[1:length(d1)-1])
+d1_l2 <- c(0,0,d1[2:length(d1)-2])
+
+
+#Sup-F test (supWald)
+stat <- Fstats(d1 ~ d1_l1, from = 0.1, to = NULL)
+plot(stat, alpha = 0.01)
+lines(breakpoints(stat))
+a<-breakpoints(stat)
+a$breakpoints
+sctest(stat, type = "supF")
+
+#Ave-F test (supWald)
+stat <- Fstats(d1 ~ d1_l1, from = 0.2, to = NULL)
+plot(stat, alpha = 0.01, aveF=TRUE)
+sctest(stat, type = "aveF")
+
+#Exp-F test (supWald)
+sctest(stat, type = "expF")
+
+# OLS-CUSUM   strucchange
+datay <- data.frame(d1, d1_l1)
+colnames(datay) <- c("y", "ylag1")
+stat <- efp(y ~ ylag1,  type = "OLS-CUSUM", data = datay)
+plot(stat, alpha = 0.1, functional = NULL)
+sctest(stat)
+
+#Recursive-CUSUM   strucchange
+datay <- data.frame(d1, d1_l1)
+colnames(datay) <- c("y", "ylag1")
+stat <- efp(y ~ ylag1,  type = "Rec-CUSUM", data = datay)
+plot(stat, alpha = 0.1, functional = NULL)
+sctest(stat)
+
+#OLS-MOSUM   strucchange
+datay <- data.frame(d1, d1_l1)
+colnames(datay) <- c("y", "ylag1")
+stat <- efp(y ~ ylag1,  type = "OLS-MOSUM", h=0.5, data = datay)
+plot(stat, alpha = 0.1, functional = NULL)
+sctest(stat)
+
+#Rec-MOSUM   strucchange
+datay <- data.frame(d1, d1_l1)
+colnames(datay) <- c("y", "ylag1")
+stat <- efp(y ~ ylag1,  type = "Rec-MOSUM", h=0.5, data = datay)
+plot(stat, alpha = 0.1, functional = NULL)
+sctest(stat)
+
+# RE
+datay <- data.frame(d1, d1_l1, d1_l2)
+colnames(datay) <- c("y", "ylag1", "ylag2")
+stat <- efp(y ~ ylag1,  type = "RE", data = datay)
+plot(stat, alpha = 0.1, functional = NULL)
+sctest(stat)
+
+# ME
+datay <- data.frame(d1, d1_l1, d1_l2)
+colnames(datay) <- c("y", "ylag1", "ylag2")
+stat <- efp(y ~ ylag1,  type = "ME",h=0.5, data = datay)
+plot(stat, alpha = 0.1, functional = NULL)
+sctest(stat)
+
+#частичные структурные разрывы
+#partial SB xlag1
+datay <- data.frame(d1, d1_l1)
+colnames(datay) <- c("y", "ylag1")
+stat <- gefp(y ~ ylag1, data = datay, parm = "ylag1")
+plot(stat, alpha = 0.1)
+sctest(stat)
+
+
+#partial SB интерсепт
+stat <- gefp(y ~ ylag1, data = datay, parm = 1)
+plot(stat, alpha = 0.1)
+sctest(stat)
+
+
+#для 1:56 sup-F
+d1_v1<-diff(data$lgdp, differences=1)
+d1_v1 <- as.numeric(levels(d1_v1))[as.integer(d1_v1)]
+d1_v1<-d1_v1[1:56]
+d1_l1_v1 <- c(0,d1_v1[1:length(d1_v1)-1])
+d1_l2_v1 <- c(0,0,d1_v1[2:length(d1_v1)-2])
+stat <- Fstats(d1_v1 ~ d1_l1_v1, from = 0.1, to = NULL)
+plot(stat, alpha = 0.01)
+lines(breakpoints(stat))
+a<-breakpoints(stat)
+a$breakpoints
+sctest(stat, type = "supF")
+
+#для 57:147 sup-F 
+d1_v2<-diff(data$lgdp, differences=1)
+d1_v2 <- as.numeric(levels(d1_v2))[as.integer(d1_v2)]
+d1_v2<-d1_v2[57:146]
+d1_l1_v2 <- c(0,d1_v2[1:length(d1_v2)-1])
+d1_l2_v2 <- c(0,0,d1_v2[2:length(d1_v2)-2])
+stat <- Fstats(d1_v2 ~ d1_l1_v2, from = 0.1, to = NULL)
+plot(stat, alpha = 0.01)
+lines(breakpoints(stat))
+a<-breakpoints(stat)
+a$breakpoints
+sctest(stat, type = "supF")
+
+'Bai Perron'
+d1<-ts(d1, start=1)
+d1_l1 <- c(0,d1[1:length(d1)-1])
+stat <- breakpoints(d1 ~ d1_l1)
+summary(stat)
+plot(stat)
+## compute breakdates corresponding to the
+## breakpoints of minimum BIC segmentation
+breakdates(stat)
+## confidence intervals
+ci <- confint(stat)
+breakdates(ci)
+ci
+plot(d1)
+lines(ci)
+
+AR1_sb <- Arima(data$lgdp[57:147], c(1,1,0), include.constant = TRUE, method = c('CSS-ML'))
+Box.test(residuals(AR1_sb), lag=5, type = c('Ljung-Box'), fitdf = 1)
+
+forecast_AR_sb <- forecast(AR1_sb, h=100)
+plot(forecast_AR_sb)
+forecast_AR_sb
+
