@@ -1,0 +1,308 @@
+data <- read.csv("C:/Users/Tank/DIXY.txt", sep = '\t', dec = ',')
+
+install.packages("forecast")
+library("forecast")
+install.packages("lmtest")
+library("lmtest")
+install.packages("tseries")
+library("tseries")
+install.packages("urca")
+library("urca")
+install.packages("TSA")
+library("TSA")
+
+data$lprice <- as.numeric(levels(data$lprice))[as.integer(data$lprice)]
+adf.test(data$lprice)
+" ряд не стационарен, ищем стационарность в разности переменной "
+plot(data$lprice)
+Pacf(data$lprice)
+ur.df(data$lprice, type="drift", lags = 1, 
+      selectlags = "Fixed")
+
+d1lprice<-diff(data$lprice, differences=1)
+adf.test(d1lprice)
+Pacf(d1lprice)
+ur.df(d1lprice, type="drift", lags = 2, 
+      selectlags = "Fixed") 
+"Стационарны первые разности"      
+
+"Проверка на стационарность"
+Pacf(d1lprice)
+"2, 5 и 10 лаги значимы"
+
+"Строим модель AR"
+AR2 <- Arima(d1lprice, c(2,0,0), include.constant =TRUE, method = c("CSS-ML"))  
+coeftest(AR2)
+summary(AR2)
+sd(residuals(AR2))
+Acf(residuals(AR2))
+Box.test(residuals(AR2), lag = 8, type = c("Ljung-Box"), fitdf = 2)
+
+AR5 <- Arima(data$lprice, c(5,1,0), include.constant =TRUE, method = c("CSS-ML"))  
+coeftest(AR5)
+summary(AR5)
+sd(residuals(AR5))
+Acf(residuals(AR5))
+Box.test(residuals(AR5), lag = 8, type = c("Ljung-Box"), fitdf = 5)
+shapiro.test(residuals(AR5))
+forecast_AR5<-forecast(AR5, h=1000)
+plot(forecast_AR5)
+a5 <- 5.8712e-02
+a4 <- -8.6490e-03
+a3 <- -1.7201e-02
+a2 <- 1.5182e-01
+a1 <- -1.3204e-02
+a0 <- (1-(5.8712e-02-8.6490e-03-1.7201e-02+1.5182e-01-1.3204e-02))*-4.9611e-05
+ts.sim <- arima.sim(n=1000, list(ar = c(a1, a2, a3, a4, a5)), sd = 0.0316666) + a0
+sd(residuals(AR5))
+write.csv(forecast_AR5, 'C:/Users/Tank/for.txt')
+
+AR10 <- Arima(d1lprice, c(10,0,0), include.constant =TRUE, method = c("CSS-ML"))  
+coeftest(AR10)
+summary(AR10)
+sd(residuals(AR10))
+Acf(residuals(AR10))
+Box.test(residuals(AR10), lag = 11, type = c("Ljung-Box"), fitdf = 10)
+
+Acf(d1lprice)
+"2, 5,7 и 10 лаги значимы"
+
+"Строим модель MA"
+MA2 <- Arima(d1lprice, c(0,0,2), include.constant =TRUE, method = c("CSS-ML"))  
+coeftest(MA2)
+summary(MA2)
+Acf(residuals(MA2))
+Box.test(residuals(MA2), lag = 8, type = c("Ljung-Box"), fitdf = 2)
+
+MA5 <- Arima(d1lprice, c(0,0,5), include.constant =TRUE, method = c("CSS-ML"))  
+coeftest(MA5)
+summary(MA5)
+Acf(residuals(MA5))
+Box.test(residuals(MA5), lag = 8, type = c("Ljung-Box"), fitdf = 5)
+
+MA7 <- Arima(d1lprice, c(0,0,7), include.constant =TRUE, method = c("CSS-ML"))  
+coeftest(MA7)
+summary(MA7)
+Acf(residuals(MA7))
+Box.test(residuals(MA7), lag = 8, type = c("Ljung-Box"), fitdf = 7)
+shapiro.test(residuals(MA7))
+
+MA10 <- Arima(d1lprice, c(0,0,10), include.constant =TRUE, method = c("CSS-ML"))  
+coeftest(MA10)
+summary(MA10)
+Acf(residuals(MA10))
+Box.test(residuals(MA10), lag = 11, type = c("Ljung-Box"), fitdf = 10)
+      
+"Строим модель ARMA"
+eacf(d1lprice)
+
+ARMA00 <- Arima(data$lprice, c(0,1,0), include.constant =TRUE, method = c("CSS-ML"))  
+coeftest(ARMA00)
+summary(ARMA00)
+Acf(residuals(ARMA00))
+Box.test(residuals(ARMA00), lag = 8, type = c("Ljung-Box"), fitdf = 0)
+"нет"
+
+ARMA02 <- Arima(data$lprice, c(0,1,2), include.constant =TRUE, method = c("CSS-ML"))  
+coeftest(ARMA02)
+summary(ARMA02)
+Acf(residuals(ARMA02))
+Box.test(residuals(ARMA02), lag = 8, type = c("Ljung-Box"), fitdf = 2)
+"нет"
+
+ARMA03 <- Arima(data$lprice, c(0,1,3), include.constant =TRUE, method = c("CSS-ML"))  
+coeftest(ARMA03)
+summary(ARMA03)
+Acf(residuals(ARMA03))
+Box.test(residuals(ARMA03), lag = 8, type = c("Ljung-Box"), fitdf = 3)
+"нет"
+
+ARMA05 <- Arima(data$lprice, c(0,1,5), include.constant =TRUE, method = c("CSS-ML"))  
+coeftest(ARMA05)
+summary(ARMA05)
+Acf(residuals(ARMA05))
+Box.test(residuals(ARMA05), lag = 8, type = c("Ljung-Box"), fitdf = 5)
+"нет"
+
+ARMA31 <- Arima(data$lprice, c(3,1,1), include.constant =TRUE, method = c("CSS-ML"))  
+coeftest(ARMA31)
+summary(ARMA31)
+Acf(residuals(ARMA31))
+Box.test(residuals(ARMA31), lag = 8, type = c("Ljung-Box"), fitdf = 4)
+"нет"
+
+ARMA22 <- Arima(data$lprice, c(2,1,2), include.constant =TRUE, method = c("CSS-ML"))  
+coeftest(ARMA22)
+summary(ARMA22)
+Acf(residuals(ARMA22))
+Box.test(residuals(ARMA22), lag = 8, type = c("Ljung-Box"), fitdf = 4)
+"нет"
+
+ARMA13 <- Arima(data$lprice, c(1,1,3), include.constant =TRUE, method = c("CSS-ML"))  
+coeftest(ARMA13)
+summary(ARMA13)
+Acf(residuals(ARMA13))
+Box.test(residuals(ARMA13), lag = 8, type = c("Ljung-Box"), fitdf = 4)
+"нет"
+
+ARMA23 <- Arima(data$lprice, c(2,1,3), include.constant =TRUE, method = c("CSS-ML"))  
+coeftest(ARMA23)
+summary(ARMA23)
+Acf(residuals(ARMA23))
+Box.test(residuals(ARMA23), lag = 8, type = c("Ljung-Box"), fitdf = 5)
+"нет"
+
+ARMA33 <- Arima(data$lprice, c(3,1,3), include.constant =TRUE, method = c("CSS-ML"))  
+coeftest(ARMA33)
+summary(ARMA33)
+Acf(residuals(ARMA33))
+Box.test(residuals(ARMA33), lag = 8, type = c("Ljung-Box"), fitdf = 6)
+"да, p-value = 0.2971"
+
+ARMA15 <- Arima(data$lprice, c(1,1,5), include.constant =TRUE, method = c("CSS-ML"))  
+coeftest(ARMA15)
+summary(ARMA15)
+Acf(residuals(ARMA15))
+Box.test(residuals(ARMA15), lag = 8, type = c("Ljung-Box"), fitdf = 6)
+"да, p-value = 0.4599, лучшая модель"
+shapiro.test(residuals(ARMA15))
+
+ARMA50 <- Arima(data$lprice, c(5,1,0), include.constant =TRUE, method = c("CSS-ML"))  
+coeftest(ARMA50)
+summary(ARMA50)
+Acf(residuals(ARMA50))
+Box.test(residuals(ARMA50), lag = 8, type = c("Ljung-Box"), fitdf = 5)
+
+#ARCH эффект
+Acf(residuals(AR5)^2)
+Box.test(residuals(AR5)^2, lag = 8, type = c("Ljung-Box"), fitdf = 5)
+Pacf(residuals(AR5)^2)
+
+
+#ARCH norm
+install.packages("rugarch")
+library("rugarch")
+
+spec = ugarchspec(variance.model = list(model = 'sGARCH',garchOrder = c(6, 0)), mean.model = list(armaOrder = c(1, 5), include.mean = TRUE), distribution.model = "norm")
+garch.fit = ugarchfit(spec, d1lprice)
+garch.fit 
+coef(garch.fit)
+
+Acf(residuals(garch.fit))
+Acf(residuals(garch.fit)^2)
+Acf(residuals(garch.fit, standardize="TRUE"))
+Acf(residuals(garch.fit, standardize="TRUE")^2)
+
+
+write.csv(residuals(garch.fit, standardize="TRUE"), "C:/Users/Tank/test_1.txt")
+stres <-read.csv("C:/Users/Tank/test_1.txt", sep=',', dec='.')
+shapiro.test(stres$V1)
+
+Box.test(stres$V1, lag = 8, type = c("Ljung-Box"), fitdf = 6)
+Box.test(stres$V1^2, lag = 8, type = c("Ljung-Box"), fitdf = 6)
+
+
+"ARCH std"
+spec = ugarchspec(variance.model = list(model = 'sGARCH',garchOrder = c(14, 0)), mean.model = list(armaOrder = c(1, 5), include.mean = TRUE), distribution.model = "std")
+garch.fit = ugarchfit(spec, d1lprice)
+garch.fit 
+coef(garch.fit)
+
+
+Acf(residuals(garch.fit))
+Acf(residuals(garch.fit)^2)
+Acf(residuals(garch.fit, standardize="TRUE"))
+Acf(residuals(garch.fit, standardize="TRUE")^2)
+
+
+write.csv(residuals(garch.fit, standardize="TRUE"), "C:/Users/Tank/test_1.txt")
+stres <-read.csv("C:/Users/Tank/test_1.txt", sep=',', dec='.')
+
+Box.test(stres$V1, lag = 8, type = c("Ljung-Box"), fitdf = 6)
+Box.test(stres$V1^2, lag = 8, type = c("Ljung-Box"), fitdf = 6)
+
+"GARCH norm"
+spec <- ugarchspec(variance.model = list(model = 'sGARCH',garchOrder = c(14, 1)), mean.model = list(armaOrder = c(1, 5), include.mean = TRUE), distribution.model = "norm")
+garch.fit <- ugarchfit(spec, d1lprice)
+garch.fit 
+coef(garch.fit)
+
+Acf(residuals(garch.fit))
+Acf(residuals(garch.fit)^2)
+Acf(residuals(garch.fit, standardize="TRUE"))
+Acf(residuals(garch.fit, standardize="TRUE")^2)
+
+write.csv(residuals(garch.fit, standardize="TRUE"), "C:/Users/Tank/test_1.txt")
+stres <-read.csv("C:/Users/Tank/test_1.txt", sep=',', dec='.')
+
+Box.test(stres$V1, lag = 8, type = c("Ljung-Box"), fitdf = 6)
+Box.test(stres$V1^2, lag = 8, type = c("Ljung-Box"), fitdf = 6)
+
+"GARCH std"
+spec <- ugarchspec(variance.model = list(model = 'sGARCH',garchOrder = c(6, 1)), mean.model = list(armaOrder = c(1, 5), include.mean = TRUE), distribution.model = "std")
+garch.fit <- ugarchfit(spec, d1lprice)
+garch.fit 
+coef(garch.fit)
+
+Acf(residuals(garch.fit))
+Acf(residuals(garch.fit)^2)
+Acf(residuals(garch.fit, standardize="TRUE"))
+Acf(residuals(garch.fit, standardize="TRUE")^2)
+
+write.csv(residuals(garch.fit, standardize="TRUE"), "C:/Users/Tank/test_1.txt")
+stres <-read.csv("C:/Users/Tank/test_1.txt", sep=',', dec='.')
+
+Box.test(stres$V1, lag = 8, type = c("Ljung-Box"), fitdf = 6)
+Box.test(stres$V1^2, lag = 8, type = c("Ljung-Box"), fitdf = 6)
+
+"прогноз"
+prognoz <- ugarchforecast(garch.fit, n.ahead = 299)
+sigma(prognoz)
+prognoz@forecast$sigmaFor
+prognoz@forecast$seriesFor
+
+"прогноз d1lprice"
+CPIforecast<-c(d1lprice, prognoz@forecast$seriesFor)
+plot(lpriceforecast)
+
+"прогноз СКО"
+sigmaforecast<-c(garch.fit@fit$sigma, sigma(prognoz))
+plot(sigmaforecast)
+
+"GARCH(1;1)"
+Pacf(d1lprice^2, 100)
+spec = ugarchspec(variance.model = list(model = 'gjrGARCH',garchOrder = c(1, 1)), mean.model = list(armaOrder = c(5, 0), include.mean = TRUE, archm = FALSE), distribution.model = "std")
+garch.fit = ugarchfit(spec, d1lprice)
+garch.fit 
+coef(garch.fit)
+
+spec = ugarchspec(variance.model = list(model = 'iGARCH',garchOrder = c(1, 1)), mean.model = list(armaOrder = c(5, 0), include.mean = TRUE, archm = FALSE), distribution.model = "std")
+garch.fit = ugarchfit(spec, d1lprice)
+bootpred = ugarchboot(garch.fit, method = "Partial", n.ahead = 1000, n.bootpred = 2000)
+
+series = as.data.frame(bootpred, which = "series", type = "q", qtile = c(0.01, 0.05, 0.95, 0.99))
+sigma = as.data.frame(bootpred, which = "sigma", type = "q", qtile = c(0.01, 0.05, 0.95, 0.99))
+
+write.csv(series, "C:/Users/Tank/series_gjrGARCH11_08.csv")
+write.csv(sigma, "C:/Users/Tank/sigma_gjrGARCH11_08.csv")
+
+series_gjrGARCH11 = as.data.frame(bootpred@fseries)
+sigma_gjrGARCH11 = as.data.frame(bootpred@fsigma)
+
+write.csv(series_gjrGARCH11, "C:/Users/Tank/series_gjrG_08.csv")
+write.csv(sigma_gjrGARCH11, "C:/Users/Tank/sigma_gjrG_08.csv")
+
+bootpred = ugarchboot(garch.fit, method = "Partial", n.ahead = 300, n.bootpred = 10000)
+bootpred
+series = as.data.frame(bootpred@fseries)
+
+sigma = as.data.frame(bootpred@fsigma)
+
+
+sigma_hist_e = as.data.frame(garch.fit@fit$sigma)
+write.csv(sigma_hist_e, "C:/Users/Tank/sigma_hist_e_iG.csv")
+
+write.csv(series, "C:/Users/Tank/series_iG.csv")
+
+?ugarchspec
+
