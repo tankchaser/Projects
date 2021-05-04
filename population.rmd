@@ -1,0 +1,95 @@
+data <- read.csv("C:/Users/Tank/pop.txt", sep = '\t', dec = ',')
+
+install.packages("forecast")
+library("forecast")
+install.packages("lmtest")
+library("lmtest")
+install.packages("tseries")
+library("tseries")
+install.packages("urca")
+library("urca")
+install.packages("TSA")
+library("TSA")
+
+" проверка на стационарность переменной "
+adf.test(data$lpop)
+" ряд не стационарен, ищем стационарность в разности переменной "
+
+"перекодировали переменную и сделали разность"
+data$lpop <- as.numeric(data$lpop)
+data$lpop <- as.numeric(levels(data$lpop))[as.integer(data$lpop)]
+d1lpop<-diff(data$lpop, differences=1)
+adf.test(d1lpop)
+" ряд не стационарен, ищем стационарность во второй разности переменной "
+
+d2lpop<-diff(data$lpop, differences=2)
+adf.test(d2lpop)
+
+"Проверка на стационарность Уровня зарплаты"
+Pacf(d2lpop)
+"1, 2, 17 лаги значимы"
+
+"Строим модель AR(2) по населению"
+AR2 <- Arima(d2lpop, c(2,0,0), include.constant =TRUE, method = c("CSS-ML"))  
+coeftest(AR2)
+summary(AR2)
+sd(residuals(AR2))
+Acf(residuals(AR2))
+Box.test(residuals(AR2), lag = 4, type = c("Ljung-Box"), fitdf = 2)
+
+Acf(d2lpop)
+"1, 3, 5, 6 и 8 лаги значимы"
+
+"Строим модель MA(1) по населению"
+MA1 <- Arima(d2lpop, c(0,0,1), include.constant =TRUE, method = c("CSS-ML"))  
+coeftest(MA1)
+summary(MA1)
+Acf(residuals(MA1))
+Box.test(residuals(MA1), lag = 4, type = c("Ljung-Box"), fitdf = 1)
+
+"Строим модель MA(3) по населению"
+MA3 <- Arima(d2lpop, c(0,0,3), include.constant =TRUE, method = c("CSS-ML"))  
+coeftest(MA3)
+summary(MA3)
+Acf(residuals(MA3))
+Box.test(residuals(MA3), lag = 4, type = c("Ljung-Box"), fitdf = 3)
+
+"Строим модель MA(6) по населению"
+MA6 <- Arima(d2lpop, c(0,0,6), include.constant =TRUE, method = c("CSS-ML"))  
+coeftest(MA6)
+summary(MA6)
+Acf(residuals(MA6))
+Box.test(residuals(MA6), lag = 7, type = c("Ljung-Box"), fitdf = 6)
+
+eacf(d2lpop)
+
+"Строим модель ARMA(0,1) по населению"
+ARMA01 <- Arima(d2lpop, c(0,0,1), include.constant =TRUE, method = c("CSS-ML"))  
+coeftest(ARMA01)
+summary(ARMA01)
+Acf(residuals(ARMA01))
+Box.test(residuals(ARMA01), lag = 4, type = c("Ljung-Box"), fitdf = 1)
+
+?Arima
+
+
+MA1 <- Arima(data$lpop, c(0,1,1), include.constant =TRUE, method = c("CSS-ML"))
+
+coeftest(MA1)
+sd(residuals(MA1))
+
+summary(MA1)
+forecast_MA1 <- forecast(MA1, h=25)
+plot(forecast_MA1)
+b1 <- 0.94291689
+b0 <- 0.0003345156
+
+0.00586015*(1-0.94291689)
+
+ts.sim <- arima.sim(n=25, list(ma = c(b1)), sd = 0.001565288) + b0
+sd(residuals(MA1))
+plot(ts.sim)
+
+as.data.frame(ts.sim)
+
+(1-0.94291689)*0.00586015
